@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+<link rel="stylesheet" type="text/css" href="style.css"/>
+<script>
+
+window.onload=function( e ){
+
+	var canvas=document.getElementById( "GameCanvas" );
+	var splitter=document.getElementById( "Splitter" );
+	var console=document.getElementById( "GameConsole" );
+	
+	var mouseDown=false;
+	var startY=0;
+	var canvasH=window.innerHeight;
+	var cmousemove=null;
+	var cmouseup=null;
+	var cmouseout=null;
+	var fscreen=false;
+	
+	canvas.width = window.innerWidth;
+	canvas.height = window.innerHeight;
+
+	function eatEvent( e ){
+		if( e.stopPropagation ){
+			e.stopPropagation();
+			e.preventDefault();
+		}else{
+			e.cancelBubble=true;
+			e.returnValue=false;
+		}
+	}
+	
+	function requestFullscreen(){
+		var rfs=canvas.requestFullscreen || canvas.webkitRequestFullScreen || canvas.mozRequestFullScreen;
+		if( rfs ) rfs.call( canvas );
+	}
+	
+	canvas.onfullscreenchange=function( e ){
+		fscreen=(document.fullscreenElement==canvas);
+		updateSize();
+	}
+	
+	canvas.onwebkitfullscreenchange=function( e ){
+		fscreen=(document.webkitFullscreenElement==canvas);
+		updateSize();
+	}
+	
+	canvas.onmozfullscreenchange=function( e ){
+		fscreen=(document.mozFullscreenElement==canvas);
+		updateSize();
+	}
+	
+	splitter.onmousedown=function( e ){
+		mouseDown=true;
+		startY=e.clientY;
+		cmousemove=canvas.onmousemove;
+		cmouseup=canvas.onmouseup;
+		cmouseout=canvas.onmouseout;
+		canvas.onmousemove=null;
+		canvas.onmouseup=null;
+		canvas.onmouseout=null;
+		eatEvent( e );
+	}
+	
+	window.onmousemove=function( e ){
+		if( mouseDown ){
+			var dy=e.clientY-startY;
+			startY+=dy;
+			canvasH+=dy;
+			updateSize();
+			eatEvent( e );
+		}
+	}
+	
+	window.onmouseup=function( e ){
+		if( mouseDown ){
+			canvas.onmousemove=cmousemove;
+			canvas.onmouseup=cmouseup;
+			canvas.onmouseout=cmouseout;
+			mouseDown=false;
+			eatEvent( e );
+			
+			if( canvasH+splitter.clientHeight>=window.innerHeight ) requestFullscreen();
+		}
+	}
+	
+	BBMonkeyGame.Main( canvas );
+		
+}
+</script>
+</head>
+
+<body>
+
+<canvas id="GameCanvas" tabindex=1></canvas>
+
+<div id="Splitter" class=splitter></div>
+
+<div><textarea id="GameConsole" readonly></textarea></div>
+
+<script language="javascript" src="main.js">Javascript not supported!</script>
+
+</body>
+</html>
