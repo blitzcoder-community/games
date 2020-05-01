@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+body{
+	height: 100%;
+	overflow: hidden; /* keeps scrollbar off IE */
+	font-family: arial,sans-serif;
+	font-size: 13px;
+	color: #000;
+	background-color: #000;
+	border: 0 none white;
+	padding: 0;
+	margin: 0;
+}
+canvas{
+	border: 0;
+	padding: 0;
+  width:100vw;
+  height: 100vh;
+  display: block;
+	outline: none;
+}
+</style>
+<script>
+var url = "https://sandbox.blitzcoder.org/blitzx/";
+
+var demos = [
+  "game",
+  "dragon",
+  "driver",
+  "playsound",
+  "infinite_plane",
+  "sprite3d"
+];
+
+function qs(name, url) {
+    if (!url) url = window.location.href;
+    name = name.replace(/[\[\]]/g, '\\$&');
+    var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),
+        results = regex.exec(url);
+    if (!results) return null;
+    if (!results[2]) return '';
+    return decodeURIComponent(results[2].replace(/\+/g, ' '));
+}
+
+</script>
+</head>
+
+<body>
+<div class="emscripten" id="status"></div>
+<canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" width="800" height="600">Sorry, your browser doesn't support the &lt;canvas&gt; element.</canvas>
+<script>
+var id = qs('id');
+var script = document.createElement('script');
+script.src = url + demos[id] + "/" + demos[id] + ".loader.js";
+document.body.appendChild(script);
+</script>
+</body>
+</html>
