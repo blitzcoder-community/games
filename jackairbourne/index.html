@@ -1,0 +1,2664 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="user-scalable=no, width=640, height=480">
+    <title></title>
+    <style> body { margin: 0; background: #007777;} </style>
+<script src="jumperworld_data.js"></script>
+
+<script>
+// ************************************************************************************************ #006600
+// BlitzBasic To Javascript Runtime-Template, 2020 by Dieter Marfurt. rtfm
+
+
+// system globals, some of them actually used
+var bb2js__game_width=640; // 16:9 eco
+var bb2js__game_height=480;
+bb2js__game_width=320; // 4:3 eco, note: this will be scaled up 2x further below, in the bb2js__myinit() function
+bb2js__game_height=240;
+var bb2js__game_width_half=bb2js__game_width/2;
+var bb2js__game_height_half=bb2js__game_height/2;
+var bb2js__dev_alpha=0; // device orientation buffers
+var bb2js__dev_beta=0;
+var bb2js__dev_gamma=0;
+var bb2js__dev_alpha_comfy=0; // intial device orientation
+var bb2js__dev_beta_comfy=0;
+var bb2js__dev_gamma_comfy=0;
+var bb2js__dev_orientation_support=0;
+var bb2js__dev_sensible=5; // how much deg to tilt device for action
+var bb2js__landscapemode=1;
+var bb2js__turn_drift_left=0;
+var bb2js__turn_drift_right=0;
+var bb2js__geladen=false;
+var bb2js__focus_timer=0;
+var bb2js__meldung_id;// debug to innerHTML text
+
+var bb2js__cursor_left=0;
+var bb2js__cursor_right=0;
+var bb2js__cursor_up=0;
+var bb2js__cursor_down=0;
+
+var bb2js__currenttime = "";
+var bb2js__millisecs = 0;
+var bb2js__old_millisecs = 0;
+var bb2js__frame_time=0;
+var bb2js__millisecs = 0;
+
+var bb2js__canvas=0;
+
+
+//GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+//GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+//GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+//GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+//GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+//GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+//GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+//GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+//GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+//GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+//GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+//GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG
+// globals bb2js and game specific
+var bb2js__ctx=0;
+
+var bb2js__path="bb2js__defaultstorage";
+var bb2js__mousex=0;
+var bb2js__mousey=0;
+var bb2js__old_mousex=0;
+var bb2js__old_mousey=0;
+var bb2js__mousedown=1;
+
+var bb2js__end_it_all=0;
+var bb2js__rad_rel=57.29577951;
+
+var bb2js__ClsRed=0;
+var bb2js__ClsGreen=0;
+var bb2js__ClsBlue=0;
+
+var bb2js__Red=255;
+var bb2js__Green=255;
+var bb2js__Blue=255;
+var bb2js__GetKey=0;
+
+
+//XXXXXXXXXXXXXXXXXXXXXXXXXXXX Insert your Globals and Functions here!
+ //  A sideview plain 2D Jump 'n'Run platformer with 4 layer 4-way-scrolling Parallax backgrounds
+ //  with integrated world editor(windows version only) written in Blitzbasic and released as open source.
+
+ //  By Dieter Marfurt
+
+
+ //  keys:
+
+ //  E toggle editor
+ //  S save map (overwrite!) - keep a copy of the original...
+ //  L reload map
+ //  N restart from last savepoint
+ //  C clear map
+ //  space player attack
+ //  m alter music volume
+ //  esc=end
+ //  cursors= run + jump
+
+
+ //  note: file paths may/should use lash "/" instead of backlash "\\", blitz3d seems to accept both, but
+ //  js won't when running from a server.
+ //  this eases conversion to javascript and running it from a server
+
+// open window in vga 320x240 mode, then scale up 3x ; // weird...
+
+game_over=0;
+dumpfbacke="";
+scr_w=320;
+scr_h=240;
+// AppTitle "Jack Airbourne - A Gravity Anomaly", "You want to end this Game?";
+
+title_screen=LoadImage("sys/titlescreen.png");
+
+player_x=0;
+player_y=0;
+jump_block=0;
+
+// used to update image properties, once loaded (not used yet)
+var all_images=0
+all_images_used = new Array();
+
+// y translation curve for jumps
+jump_curve = new Array();
+for(i=0 ;i<= 180 ;i+=1){
+jump_curve[i]=Sin(2*i-90)/80.0;
+} //next
+
+ // load system images
+scroll_left= LoadImage("sys/scroll-left.png");
+scroll_right=LoadImage("sys/scroll-right.png");
+
+//load bitmap font
+number = new Array();
+for(i=0 ;i<= 58 ;i+=1){
+number[i+32]=LoadImage("sys/font/char"+i+".png"); 
+} //next
+
+//load and init various
+lives_left= LoadImage("sys/lives_left.png");
+lives_lost= LoadImage("sys/lives_lost.png");
+msg_countdown=0;
+msg_text="";
+
+ // load procedural fx particle images
+fx_max=100;
+fx_slot=0;
+fx_c = new Array(); //  countdown for an fx
+fx_x = new Array(); //  stores where a fx should be played
+fx_y = new Array();
+fx_img = new Array(); //  images used by fx (stores index of array fx_img_orig)
+fx_what_fx = new Array(); // what fx procedure to do
+fx_img_orig = new Array();
+
+fx_img_orig[0]=LoadImage("fx/ministar1.png");
+fx_img_orig[1]=LoadImage("fx/ministar2.png");
+fx_img_orig[2]=LoadImage("fx/ministar3.png");
+fx_img_orig[3]=LoadImage("fx/blood.png");
+
+
+ // load sounds
+s_jump=LoadSound("sound/jump.wav");
+s_step=LoadSound("sound/mysteps.mp3");
+s_pain=LoadSound("sound/pain01.wav");
+s_sword=LoadSound("sound/sword.mp3");
+s_swish=LoadSound("sound/swish.mp3");
+s_enemy_dies1=LoadSound("sound/enemy_dies1.mp3");
+s_bonus1=LoadSound("sound/bonus1.mp3");
+s_bonus2=LoadSound("sound/bonus3.mp3");
+s_music=LoadSound("sound/The_Last_Encounter_Long_Loop.mp3");
+chan_music_volume=0.5;
+// LoopSound(s_music);
+
+ // load tiles
+ // max 1000 tiles][ each may 100 ani-frames
+tile_absolutemax=1000;
+tiles_txt = new Array();
+
+tiles_ani_list = new Array();
+tiles_ani_counter=0;
+tile_max=0;
+tiles = new Array();
+tiles_w = new Array();
+tiles_h = new Array();
+tiles_align = new Array();
+tiles_action = new Array();
+
+tiles_ani_numframes = new Array();
+tiles_ani_speed = new Array();
+tiles_ani_currframe = new Array();
+tiles_ani_currsubframe = new Array();
+tiles_ani_img = new Array();
+i=0;
+j=0;
+// setting up 2nd dimension of array tiles_ani_img-------------
+s1=tile_absolutemax;
+s2=100;
+for(i=0;i<=s1;i++)
+{
+ tiles_ani_img[i]=new Array();
+ for(j=0;j<=s2;j++)
+ {
+  tiles_ani_img[i][j]=0;
+ }//i
+}//j
+i=0;
+j=0;
+// end of: setting up array tiles_ani_img-------------
+
+
+editor_first=1;
+editor_picks = new Array();
+for(i=0 ;i<= 10 ;i+=1){
+editor_picks[i]=1+i;
+} //next
+
+load_tiles();
+
+
+
+ // init parallax bg
+bg = new Array();
+bgx = new Array();
+bgy = new Array();
+
+
+for(i=1 ;i<= 6 ;i+=1){
+bg[i]=LoadImage("background/layers/bg2_"+i+".png" );
+bgx[i]=0;
+bgy[i]=0;
+if( bg[i]==0){
+ alert("error: background/layers/bg2_"+i+".png not found");
+} //endif
+} //next
+
+
+
+ //  init player------------------
+x_speed_add=0.01;
+x_speed_max=0.1;
+
+p_ani = new Array();
+p_ani_path = new Array();
+p_ani2 = new Array();
+p_anilo = new Array();
+p_anihi = new Array();
+load_p_ani();
+
+//p_anilo[0]=0; //  attack 1
+//p_anilo[1]=5; //  attack 2
+//p_anilo[2]=11; //  attack 3
+//p_anilo[3]=17; //  climb
+//p_anilo[4]=22; //  grab
+//p_anilo[5]=26; //  jump
+//p_anilo[6]=29; //  crouch
+//p_anilo[7]=33; //  die
+//p_anilo[8]=40; //  fall
+//p_anilo[9]=42// hurt;
+//p_anilo[10]=45; //  idle
+//p_anilo[11]=49 ; //  idle 2
+//p_anilo[12]=53; //  jump real
+//p_anilo[13]=57; //  run
+//p_anilo[14]=63; //  slide
+//p_anilo[15]=65; //  smrslt salto
+//p_anilo[16]=69; //  stand
+//p_anilo[17]=72; //  dummy
+p__death=7 ; //  mote: array indexes
+p__stand=5;
+p__jump2=5;
+p__salto=15;
+p__run=13;
+p__jump=10;
+p__fall=8;
+p__attack=2;
+p__idle2=11;
+p__dir=1;
+
+p__anistate=p__fall ; //  used for player character ani control
+p_ani_c=p_anilo[p__anistate];
+y_speed=0; //  gravity of the situation. note: negative = jumping up, positive  = falling down
+
+// init map / world in 2D array...
+world = new Array(); //  1001 x 101 potential tiles
+i=0;
+j=0;
+
+// setting up 2nd dimension of array world-------------
+s1=1010;
+s2=110;
+for(i=0;i<=s1;i++)
+{
+ world[i]=new Array();
+ for(j=0;j<=s2;j++)
+ {
+  world[i][j] = 0;
+ }//i
+}//j
+
+// load the map. note: single dimension array "waste" holds the data, see script include "jumperworld_data.js" right before this script starts.
+s1=1000;
+s2=100;
+ var indi=0;
+for(j=0;j<=s2;j++)
+{
+ for(i=0;i<=s1;i++)
+ {
+indi=i+(j*1001);
+  world[i][j] = waste[indi];
+ }//i
+}//j
+i=0;
+j=0;
+// end of: setting up array world-------------
+
+// loadlevel(); // that would have worked too ^^ - it does the same, after game-over
+
+// init enemy system
+enemy_x = new Array();
+enemy_y = new Array();
+enemy_xoff = new Array();
+enemy_yoff = new Array();
+enemy_speed = new Array();
+enemy_dead = new Array();
+enemy_dir = new Array();
+e__anistate = new Array();
+enemy_which_ani = new Array();
+
+
+ //  100 ani parts,10 max enemy types
+w=10; //  max number of enemy types
+
+e_ani = new Array();
+i=0;
+j=0;
+// setting up 2nd dimension of array e_ani-------------
+s1=100;
+s2=w;
+for(i=0;i<=s1;i++)
+{
+ e_ani[i]=new Array();
+ for(j=0;j<=s2;j++)
+ {
+  e_ani[i][j]=0;
+ }//i
+}//j
+i=0;
+j=0;
+// end of: setting up array e_ani-------------
+e_ani_path = new Array();
+i=0;
+j=0;
+// setting up 2nd dimension of array e_ani_path-------------
+s1=100;
+s2=w;
+for(i=0;i<=s1;i++)
+{
+ e_ani_path[i]=new Array();
+ for(j=0;j<=s2;j++)
+ {
+  e_ani_path[i][j]='';
+ }//i
+}//j
+i=0;
+j=0;
+// end of: setting up array e_ani_path-------------
+e_ani2 = new Array();
+i=0;
+j=0;
+// setting up 2nd dimension of array e_ani2-------------
+s1=100;
+s2=w;
+for(i=0;i<=s1;i++)
+{
+ e_ani2[i]=new Array();
+ for(j=0;j<=s2;j++)
+ {
+  e_ani2[i][j]=0;
+ }//i
+}//j
+i=0;
+j=0;
+// end of: setting up array e_ani2-------------
+e_anilo = new Array();
+i=0;
+j=0;
+// setting up 2nd dimension of array e_anilo-------------
+s1=20;
+s2=w;
+for(i=0;i<=s1;i++)
+{
+ e_anilo[i]=new Array();
+ for(j=0;j<=s2;j++)
+ {
+  e_anilo[i][j]=0;
+ }//i
+}//j
+i=0;
+j=0;
+// end of: setting up array e_anilo-------------
+e_anihi = new Array();
+i=0;
+j=0;
+// setting up 2nd dimension of array e_anihi-------------
+s1=20;
+s2=w;
+for(i=0;i<=s1;i++)
+{
+ e_anihi[i]=new Array();
+ for(j=0;j<=s2;j++)
+ {
+  e_anihi[i][j]=0;
+ }//i
+}//j
+i=0;
+j=0;
+// end of: setting up array e_anihi-------------
+// wow the coverter wrote all that typo-prone section
+
+// more quick and wasteful memory allocation for simplicity, but all in all it's nothing.
+w=10000;
+e_ani_c  = new Array();
+e__death = new Array();
+e__stand = new Array();
+e__jump2 = new Array();
+e__salto = new Array();
+e__run = new Array();
+e__jump = new Array();
+e__fall = new Array();
+e__attack = new Array();
+e__idle2 = new Array();
+
+w=0; //  ani seq index set for enemy number w
+e__death[w]=1;
+e__run[w]=2;
+e__attack[w]=0;
+
+w=1;
+e__death[w]=1;
+e__run[w]=2;
+e__attack[w]=0;
+
+load_e_ani();
+
+w=2;
+e__death[w]=1;
+e__run[w]=2;
+e__attack[w]=0;
+
+load_e_ani();
+
+ //  check for enemies in map
+enemy_z=0;
+//read_enemies(); // this call has moved and is now in now in bb2js__myinit()
+
+max_lives=10;
+lives=max_lives;
+
+editor_on=0;
+
+
+very_start_x= 3 ; //  where the game actually starts (legal range: x= 2 to 978, y= 2 to 89)
+very_start_y= 84;
+
+start_x=very_start_x ; //  used for savepoints
+start_y=very_start_y;
+
+player_x=start_x;
+player_y=start_y;
+
+p__dir=0 ; //  player looking left or right
+game_over=0; // some vars need to be introduced for js
+death=0;
+p_attacking=0;
+x_speed=0;
+jumping=0;
+sea_funeral=0;
+p_score=0;
+
+// end of global init
+
+// -------------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------------------
+// -------------------------------------------------------------------------------------------------------------------
+// start of functions imported from bb2js converter
+
+
+function myText(x,y,s){
+s=Upper(s);
+a=0;
+for(i=1 ;i<= Len(s) ;i+=1){
+a=Asc(Mid(s,i,1));
+if( number[a]!=0){
+DrawImage( number[a],x+((i-1)*16),y);
+} //endif
+} //next
+} //eo function
+
+function myText2(x,y,s){ // just more narrow kerning
+s=Upper(s);
+a=0;
+for(i=1 ;i<= Len(s) ;i+=1){
+a=Asc(Mid(s,i,1));
+if( number[a]!=0){
+DrawImage( number[a],x+((i-1)*14),y);
+} //endif
+} //next
+} //eo function
+
+function msg(s){
+if( msg_countdown<=0){
+msg_text=Upper(s);
+msg_countdown=280;
+} //endif
+} //eo function
+
+function update_msg(){
+if( msg_countdown>0){
+s=msg_text;
+msg_countdown=msg_countdown-5;
+ms2=msg_countdown-160;
+if( ms2<0){
+ms2=0;
+} //endif
+x=160-((Len(s)/2.0)*16);
+for(i=1 ;i<= Len(s) ;i+=1){
+a=Asc(Mid(s,i,1));
+if( number[a]!=0){
+i_is_odd=i & 1;
+if( i_is_odd==1){
+DrawImage (number[a],x+((i-1)*16),170-(ms2));
+}else{
+DrawImage (number[a],x+((i-1)*16),170+(ms2));
+} //endif
+} //endif
+} //next
+} //endif
+} //eo function
+
+function stop_all_fx(){
+for(ii=0 ;ii<= fx_max ;ii+=1){
+fx_c[ii]=0;
+} //next
+} //eo function
+
+function read_enemies(){
+enemy_z=0 ; //  counter for enemies
+for(j=0 ;j<= 100 ;j+=1){
+for(i=0 ;i<= 1000 ;i+=1){
+if(Rand(0,100) > 30)
+{
+//world[i][j]=1+Floor(Rnd(0,5)); // Floor(Rnd(0, 1.9))
+}
+else
+{
+//world[i][j]=0; // Floor(Rnd(0, 1.9))
+}
+
+action=tiles_action[world[i][j]];
+hasbits_dum=action & (16+32+64);
+if( hasbits_dum!=0){ //  is enemy
+enemy_x[enemy_z]=i;
+enemy_y[enemy_z]=j;
+enemy_xoff[enemy_z]=0;
+enemy_yoff[enemy_z]=0;
+enemy_speed[enemy_z]=0.06;
+enemy_dead[enemy_z]=0;
+enemy_dir[enemy_z]=0;
+acac=0;
+is32=action & 32;
+if( is32!=0){
+acac=1;
+} //endif
+is64=action & 64;
+if( is64!=0){
+acac=2;
+} //endif
+enemy_which_ani[enemy_z]=acac;
+e_ani_c[enemy_z]=e__run[enemy_which_ani[enemy_z]];
+e__anistate[enemy_z]=e__run[enemy_which_ani[enemy_z]];
+enemy_z=enemy_z+1;
+} //endif
+} //next
+} //next
+for(i=0 ;i<= enemy_z-1 ;i+=1){
+e_ani_c[i]=e_anilo[e__anistate[i]][enemy_which_ani[i]];
+} //next
+} //eo function
+
+
+function tile_img_smart(tile_index,update_ani){
+ is_ani= (tiles_action[tile_index]& 256);
+ if( is_ani!=0){
+  tc=tiles_ani_currframe[tile_index];
+  img=tiles_ani_img[tile_index][tc];
+  return img;
+ }else{
+  return tiles [  tile_index  ];
+ } //endif
+} //eo function
+
+function update_ani_tiles(){
+ for(i=0 ;i<= tiles_ani_counter-1 ;i+=1){
+  tile_index=tiles_ani_list[i];
+  tn=tiles_ani_numframes[tile_index];
+  tc=tiles_ani_currframe[tile_index];
+  tiles_ani_currsubframe[tile_index]=tiles_ani_currsubframe[tile_index]+1;
+  tspeed=tiles_ani_speed[tile_index]; 
+  tspeed_c=tiles_ani_currsubframe[tile_index];
+  img=tiles_ani_img[tile_index][tc];
+  if( tspeed_c>tspeed){
+   tiles_ani_currsubframe[tile_index]=0;
+   tc=tc+1;
+   if( tc>=tn){
+    tc=0;
+   } //endif
+   tiles_ani_currframe[tile_index]=tc;
+  } //endif
+ } //next
+} //eo function
+
+
+
+function load_tiles(){
+tiles_txt[0]="black.png";
+tiles_txt[1]="0";
+tiles_txt[2]="tile_1d.png";
+tiles_txt[3]="1";
+tiles_txt[4]="tile_1a.png";
+tiles_txt[5]="1";
+tiles_txt[6]="tile_1b.png";
+tiles_txt[7]="1";
+tiles_txt[8]="tile_1c.png";
+tiles_txt[9]="1";
+tiles_txt[10]="tile_3d.png";
+tiles_txt[11]="1";
+tiles_txt[12]="tile_3a.png";
+tiles_txt[13]="1";
+tiles_txt[14]="tile_3b.png";
+tiles_txt[15]="1";
+tiles_txt[16]="tile_3c.png";
+tiles_txt[17]="1";
+tiles_txt[18]="tile_3e.png";
+tiles_txt[19]="1";
+tiles_txt[20]="tile_3f.png";
+tiles_txt[21]="1";
+tiles_txt[22]="tile_4a.png";
+tiles_txt[23]="1";
+tiles_txt[24]="tile_4e.png";
+tiles_txt[25]="0";
+tiles_txt[26]="tile_4f.png";
+tiles_txt[27]="0";
+tiles_txt[28]="tile_4g.png";
+tiles_txt[29]="0";
+tiles_txt[30]="tile_4b.png";
+tiles_txt[31]="1";
+tiles_txt[32]="tile_4c.png";
+tiles_txt[33]="1";
+tiles_txt[34]="tile_4d.png";
+tiles_txt[35]="1";
+tiles_txt[36]="savepoint.png";
+tiles_txt[37]="2";
+tiles_txt[38]="tile_4h.png";
+tiles_txt[39]="0";
+tiles_txt[40]="tile_4i.png";
+tiles_txt[41]="0";
+tiles_txt[42]="tile_4j.png";
+tiles_txt[43]="0";
+tiles_txt[44]="test__ani32x32x4.bmp";
+tiles_txt[45]="4//speed:20";
+tiles_txt[46]="boulder1.png";
+tiles_txt[47]="1";
+tiles_txt[48]="boulder2.png";
+tiles_txt[49]="0";
+tiles_txt[50]="bubbles.png";
+tiles_txt[51]="0//";
+tiles_txt[52]="goldcoin__ani32x32x6.bmp";
+tiles_txt[53]="4//speed:5";
+tiles_txt[54]="water.png";
+tiles_txt[55]="0//";
+tiles_txt[56]="beartrap.png";
+tiles_txt[57]="8";
+tiles_txt[58]="tile_enemy1.png";
+tiles_txt[59]="16//enemy 1";
+tiles_txt[60]="tile_enemy2.png";
+tiles_txt[61]="32//enemy 2";
+tiles_txt[62]="tile_enemy3.png";
+tiles_txt[63]="64//enemy 3";
+tiles_txt[64]="tile_enemy_dirswitch.png";
+tiles_txt[65]="128";
+tiles_txt[66]="grass1.png";
+tiles_txt[67]="0";
+tiles_txt[68]="tree1.png";
+tiles_txt[69]="0// alignbottom";
+tiles_txt[70]="grass2.png";
+tiles_txt[71]="0";
+tiles_txt[72]="tree2.png";
+tiles_txt[73]="0// alignbottom";
+tiles_txt[74]="tombstone1.png";
+tiles_txt[75]="0";
+tiles_txt[76]="heartbeat__ani32x32x4.bmp";
+tiles_txt[77]="512// speed:8";
+
+var zz=0
+
+while( zz<77){ 
+ lin=tiles_txt[zz]; // ReadLine$(re)
+ zz=zz+1;
+ if( tile_max<tile_absolutemax){
+  // ------- load tile ani tile?--------------------------
+  if( Instr(lin,"__ani",1)>0){
+
+   lin2=tiles_txt[zz]; // ReadLine$(re)
+   zz=zz+1;
+
+   if( Instr(lin2,"alignbottom")>0){
+    tiles_align[tile_max]=1;
+   }else{
+    tiles_align[tile_max]=0;
+   } //endif
+
+   speed=10;
+   spee=Instr(lin2,"speed:",1);
+   if( spee >0){
+    speed=parseInt(Right(lin2,Len(lin2)-(spee+5)));
+   } //endif
+   li=0;
+   li=parseInt(lin2);
+   li=(li | 256); //  set ani flag, wasting the rest of the line btw
+   lin2=li;
+   tiles_action[tile_max]=li;
+   // extract w,h,n from filename eg- myimage__ani32x32x4.bmp is 4 frames in a 128x32 image.
+   file=lin;
+   inst=Instr(file,"__ani",1);
+   we=Right(file,Len(file)-(inst+4));
+   inst2=Instr(we,"x",1);
+   ha=Right(we,Len(we)-(inst2+0));
+   inst3=Instr(ha,"x",1);
+   en=Right(ha,Len(ha)-(inst3+0));
+   w=parseInt(we);
+   h=parseInt(ha);
+   n=parseInt(en);
+   // alert("w:"+w+"  h:"+h+"  n:"+n+"");
+   tiles_w[tile_max]=w;
+   tiles_h[tile_max]=h;
+
+   tiles_ani_numframes[tile_max]=n;
+   tiles_ani_currframe[tile_max]=0;
+   tiles_ani_currsubframe[tile_max]=0;
+   tiles_ani_speed[tile_max]=speed;
+
+   ww=Instr(lin,"__ani",1);
+   lname=Left(lin,ww-1);
+
+   // load the frames of animated tile
+   for(i=0 ;i < n ;i+=1){
+    img=LoadImage("tiles/"+lname+""+i+".png");
+    //alert("tiles/"+lname+i+".png "+img+"<");
+    tiles_ani_img[tile_max][i]=img;
+   } //next
+   tiles_ani_list[tiles_ani_counter]=tile_max;
+   tiles_ani_counter=tiles_ani_counter+1;
+   tiles[tile_max]=tiles[0]; // thisbank
+   tiles_action[tile_max]=lin2;
+   tile_max=tile_max+1;
+   // -------------------------------------------------------------
+  }else{ //  no load "__ani" tile
+   lin2=tiles_txt[zz]; // ReadLine$(re)
+   zz=zz+1;
+   if( Instr(lin2,"alignbottom")>0){
+    tiles_align[tile_max]=1;
+   }else{
+    tiles_align[tile_max]=0;
+   } //endif
+   img=LoadImage("tiles/"+lin);
+   if( img!=0){
+    tiles[tile_max]=img;
+    tiles_action[tile_max]=0+parseInt(lin2);
+    tiles_w[tile_max]=img.naturalWidth; //ImageWidth(img);
+    tiles_h[tile_max]=ImageHeight(img);
+    //alert(img+"   "+tiles_w[tile_max]+"   "+tiles_h[tile_max]);
+   }else{
+    alert("tile not found: tiles/"+lin);
+    //tiles[tile_max]=tiles[0];
+   } //endif
+   //tiles_w[tile_max]=ImageWidth(img);
+   //tiles_h[tile_max]=ImageHeight(img);
+   tile_max=tile_max+1;
+  } //endif //  instr __ani
+ } //endif //  < max times
+} //wend
+} //eo function
+
+
+function load_p_ani(){ // load player anis
+p_anilo[0]=0; //  attack 1
+p_anihi[0]=4;
+p_anilo[1]=5; //  attack 2
+p_anihi[1]=10;
+p_anilo[2]=11; //  attack 3
+p_anihi[2]=16;
+p_anilo[3]=17; //  climb
+p_anihi[3]=21;
+p_anilo[4]=22; //  grab
+p_anihi[4]=25;
+p_anilo[5]=26; //  jump
+p_anihi[5]=28;
+p_anilo[6]=29; // crouch
+p_anihi[6]=32;
+p_anilo[7]=33; //  die
+p_anihi[7]=39;
+p_anilo[8]=40; //  fall
+p_anihi[8]=41;
+p_anilo[9]=42; //  hurt
+p_anihi[9]=44;
+p_anilo[10]=45; //  idle
+p_anihi[10]=48;
+p_anilo[11]=49 ; //  idle 2
+p_anihi[11]=52;
+p_anilo[12]=53; //  jump real
+p_anihi[12]=56;
+p_anilo[13]=57; //  run
+p_anihi[13]=62;
+p_anilo[14]=63; //  slide
+p_anihi[14]=64;
+p_anilo[15]=65; //  smrslt ??
+p_anihi[15]=68;
+p_anilo[16]=69; //  stand
+p_anihi[16]=71;
+p_anilo[17]=72;
+p_anihi[17]=75;
+
+
+p_ani_path[0]="adventurer-attack1-00.png";
+p_ani_path[1]="adventurer-attack1-01.png";
+p_ani_path[2]="adventurer-attack1-02.png";
+p_ani_path[3]="adventurer-attack1-03.png";
+p_ani_path[4]="adventurer-attack1-04.png";
+p_ani_path[5]="adventurer-attack2-00.png";
+p_ani_path[6]="adventurer-attack2-01.png";
+p_ani_path[7]="adventurer-attack2-02.png";
+p_ani_path[8]="adventurer-attack2-03.png";
+p_ani_path[9]="adventurer-attack2-04.png";
+p_ani_path[10]="adventurer-attack2-05.png";
+p_ani_path[11]="adventurer-attack3-00.png";
+p_ani_path[12]="adventurer-attack3-01.png";
+p_ani_path[13]="adventurer-attack3-02.png";
+p_ani_path[14]="adventurer-attack3-03.png";
+p_ani_path[15]="adventurer-attack3-04.png";
+p_ani_path[16]="adventurer-attack3-05.png";
+p_ani_path[17]="adventurer-crnr-clmb-00.png";
+p_ani_path[18]="adventurer-crnr-clmb-01.png";
+p_ani_path[19]="adventurer-crnr-clmb-02.png";
+p_ani_path[20]="adventurer-crnr-clmb-03.png";
+p_ani_path[21]="adventurer-crnr-clmb-04.png";
+p_ani_path[22]="adventurer-crnr-grb-00.png";
+p_ani_path[23]="adventurer-crnr-grb-01.png";
+p_ani_path[24]="adventurer-crnr-grb-02.png";
+p_ani_path[25]="adventurer-crnr-grb-03.png";
+p_ani_path[26]="adventurer-crnr-jmp-00.png";
+p_ani_path[27]="adventurer-crnr-jmp-01.png";
+p_ani_path[28]="adventurer-crnr-jmp-02.png";
+p_ani_path[29]="adventurer-crouch-00.png";
+p_ani_path[30]="adventurer-crouch-01.png";
+p_ani_path[31]="adventurer-crouch-02.png";
+p_ani_path[32]="adventurer-crouch-03.png";
+p_ani_path[33]="adventurer-die-00.png";
+p_ani_path[34]="adventurer-die-01.png";
+p_ani_path[35]="adventurer-die-02.png";
+p_ani_path[36]="adventurer-die-03.png";
+p_ani_path[37]="adventurer-die-04.png";
+p_ani_path[38]="adventurer-die-05.png";
+p_ani_path[39]="adventurer-die-06.png";
+p_ani_path[40]="adventurer-fall-00.png";
+p_ani_path[41]="adventurer-fall-01.png";
+p_ani_path[42]="adventurer-hurt-00.png";
+p_ani_path[43]="adventurer-hurt-01.png";
+p_ani_path[44]="adventurer-hurt-02.png";
+p_ani_path[45]="adventurer-idle-00.png";
+p_ani_path[46]="adventurer-idle-01.png";
+p_ani_path[47]="adventurer-idle-02.png";
+p_ani_path[48]="adventurer-idle-03.png";
+p_ani_path[49]="adventurer-idle-2-00.png";
+p_ani_path[50]="adventurer-idle-2-01.png";
+p_ani_path[51]="adventurer-idle-2-02.png";
+p_ani_path[52]="adventurer-idle-2-03.png";
+p_ani_path[53]="adventurer-jump-00.png";
+p_ani_path[54]="adventurer-jump-01.png";
+p_ani_path[55]="adventurer-jump-02.png";
+p_ani_path[56]="adventurer-jump-03.png";
+p_ani_path[57]="adventurer-run-00.png";
+p_ani_path[58]="adventurer-run-01.png";
+p_ani_path[59]="adventurer-run-02.png";
+p_ani_path[60]="adventurer-run-03.png";
+p_ani_path[61]="adventurer-run-04.png";
+p_ani_path[62]="adventurer-run-05.png";
+p_ani_path[63]="adventurer-slide-00.png";
+p_ani_path[64]="adventurer-slide-01.png";
+p_ani_path[65]="adventurer-smrslt-00.png";
+p_ani_path[66]="adventurer-smrslt-01.png";
+p_ani_path[67]="adventurer-smrslt-02.png";
+p_ani_path[68]="adventurer-smrslt-03.png";
+p_ani_path[69]="adventurer-stand-00.png";
+p_ani_path[70]="adventurer-stand-01.png";
+p_ani_path[71]="adventurer-stand-02.png";
+
+ //  make horizontally mirrored copies
+for(i=0 ;i<= 71 ;i+=1){
+p_ani2[i]=LoadImage("Adventurer/sprites/"+p_ani_path[i]);
+p_ani[i]=LoadImage("Adventurer/sprites/m__"+p_ani_path[i]) ; // CopyImage(p_ani[i])
+} //next
+
+} //eo function
+
+
+
+
+
+
+
+
+
+
+
+
+function load_e_ani(){ // load enemy anis
+e_ani_path[0][0]="skeleton_attack4_04.png";
+e_ani_path[1][0]="skeleton_attack5_05.png";
+e_ani_path[2][0]="skeleton_attack6_06.png";
+e_ani_path[3][0]="skeleton_attack7_07.png";
+e_ani_path[4][0]="skeleton_death0_08.png";
+e_ani_path[5][0]="skeleton_death1_09.png";
+e_ani_path[6][0]="skeleton_death2_10.png";
+e_ani_path[7][0]="skeleton_death3_11.png";
+e_ani_path[8][0]="skeleton_walk0_12.png";
+e_ani_path[9][0]="skeleton_walk1_13.png";
+e_ani_path[10][0]="skeleton_walk2_14.png";
+e_ani_path[11][0]="skeleton_walk3_15.png";
+
+e_anilo[0][0]=0; //  attack 1
+e_anihi[0][0]=3;
+e_anilo[1][0]=4; //  die
+e_anihi[1][0]=7;
+e_anilo[2][0]=8; //  walk
+e_anihi[2][0]=11;
+e_anilo[3][0]=12; //  dummy
+e_anihi[3][0]=15;
+
+
+for(i=0 ;i<= 11 ;i+=1){
+e_ani2[i][0]=LoadImage("enemies/"+e_ani_path[i][0]);
+e_ani[i][0]=LoadImage("enemies/m__"+e_ani_path[i][0]);
+} //next
+ // -------------------------------------------------
+e_ani_path[0][1]="spider_attack_00.png";
+e_ani_path[1][1]="spider_attack_01.png";
+e_ani_path[2][1]="spider_dies_00.png";
+e_ani_path[3][1]="spider_dies_01.png";
+e_ani_path[4][1]="spider_dies_02.png";
+e_ani_path[5][1]="spider_dies_03.png";
+e_ani_path[6][1]="spider_walk_00.png";
+e_ani_path[7][1]="spider_walk_01.png";
+e_ani_path[8][1]="spider_walk_02.png";
+e_ani_path[9][1]="spider_walk_03.png";
+
+
+e_anilo[0][1]=0; //  attack 1
+e_anihi[0][1]=1;
+e_anilo[1][1]=2; //  die
+e_anihi[1][1]=5;
+e_anilo[2][1]=6; //  walk
+e_anihi[2][1]=9;
+e_anilo[3][1]=10; //  dummy
+e_anihi[3][1]=15;
+
+
+for(i=0 ;i<= 9 ;i+=1){
+e_ani2[i][1]=LoadImage("enemies/"+e_ani_path[i][1]);
+e_ani[i][1]=LoadImage("enemies/m__"+e_ani_path[i][1]);
+} //next
+
+
+ // -------------------------------------------------
+e_ani_path[0][2]="fawarr_attack_03.png";
+e_ani_path[1][2]="fawarr_attack_04.png";
+e_ani_path[2][2]="fawarr_attack_05.png";
+e_ani_path[3][2]="fawarr_attack_06.png";
+e_ani_path[4][2]="fawarr_attack_07.png";
+e_ani_path[5][2]="fawarr_attack_00.png";
+e_ani_path[6][2]="fawarr_attack_01.png";
+e_ani_path[7][2]="fawarr_attack_02.png";
+
+e_ani_path[8][2]="fawarr_dies_00.png";
+e_ani_path[9][2]="fawarr_dies_01.png";
+e_ani_path[10][2]="fawarr_dies_02.png";
+e_ani_path[11][2]="fawarr_dies_03.png";
+e_ani_path[12][2]="fawarr_dies_04.png";
+e_ani_path[13][2]="fawarr_dies_05.png";
+e_ani_path[14][2]="fawarr_dies_06.png";
+
+e_ani_path[15][2]="fawarr_run_00.png";
+e_ani_path[16][2]="fawarr_run_01.png";
+e_ani_path[17][2]="fawarr_run_02.png";
+e_ani_path[18][2]="fawarr_run_03.png";
+e_ani_path[19][2]="fawarr_run_04.png";
+e_ani_path[20][2]="fawarr_run_05.png";
+e_ani_path[21][2]="fawarr_run_06.png";
+e_ani_path[22][2]="fawarr_run_07.png";
+
+
+e_anilo[0][2]=0; //  attack 1
+e_anihi[0][2]=7;
+e_anilo[1][2]=8; //  die
+e_anihi[1][2]=14;
+e_anilo[2][2]=15; //  walk
+e_anihi[2][2]=22;
+e_anilo[3][2]=23; //  dummy
+e_anihi[3][2]=28;
+
+
+for(i=0 ;i<= 22 ;i+=1){
+e_ani2[i][2]=LoadImage("enemies/"+e_ani_path[i][2]);
+e_ani[i][2]=LoadImage("enemies/m__"+e_ani_path[i][2]);
+} //next
+} //eo function
+
+
+function loadlevel(){
+ // note: the single dimension array "waste" holds the map data and is included as external script near the top, before this whole script starts.
+ s1=1000;
+ s2=100;
+ var indi=0;
+ for(j=0;j<=s2;j++)
+ {
+  for(i=0;i<=s1;i++)
+  {
+   indi=i+(j*1001);
+   world[i][j] = waste[indi];
+  }//i
+ }//j
+ i=0;
+ j=0;
+} //eo function
+
+
+
+
+
+
+//XXXXXXXXXXXXXXXXXXXXXXXXXXXX end of: Insert your Globals and Functions here!
+
+
+
+//MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+//MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+//MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+//MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+//MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+//MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+//MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+//MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+//MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+//MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+//MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+//MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+//MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+//MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+//MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+//MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+//MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+//MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+//MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM
+
+// this is the "mainloop", the task that is executed repeatedly, limited to 60 hz (that may be too fast anyway).
+function bb2js__mythread()
+{
+ // deals with frame time
+ bb2js__old_millisecs=bb2js__millisecs;
+ bb2js__currenttime=new Date();
+ bb2js__millisecs = bb2js__currenttime.getTime();
+ bb2js__frame_time=bb2js__millisecs-bb2js__old_millisecs;
+
+
+//XXXXXXXXXXXXXXXXXXXXXXXXXXXX Insert your Mainloop Content here!
+
+Cls();
+
+if( game_over==1){
+ // reinit everything
+DrawImage( title_screen,0,0);
+DrawImage( title_screen,0,0);
+alert("try again...");
+lives=max_lives;
+game_over=0;
+msg_countdown=0;
+player_x=very_start_x;
+player_y=very_start_y;
+start_x=very_start_x;
+start_y=very_start_y;
+y_speed=-.002;
+x_speed=0;
+p__dir=0;
+drowning=0;
+loadlevel();
+read_enemies();
+p__anistate=p__fall ; // p__idle2
+p_ani_c=p_anilo[p__anistate];
+p_attacking=1;
+p__old_anistate=p__anistate;
+p_score=0;
+} //endif
+
+ //  user input: some of the keys are for design only and should be removed for game release, or made very hard to guess.
+key=GetKey();
+
+if( key==Asc("N")){ //  restart from last savepoint
+player_x=start_x;
+player_y=start_y;
+y_speed=-.002;
+} //endif
+
+if( key==Asc("m")){ //  alter music volume
+if( s_music!=0){
+chan_music_volume=chan_music_volume-0.05;
+if( chan_music_volume<0.0){
+chan_music_volume=0.5;
+} //endif
+   s_music.volume=chan_music_volume;
+} //endif
+} //endif
+
+if( key==Asc("Ö")){ // toggle editor, normall E, but it's not working, didn't even bother to debug yet. (Use windows version to edit a map)
+editor_on=editor_on ^ 1;
+if( editor_on==1){
+player_xe=player_x;
+player_ye=player_y;
+} //endif
+if( editor_on==0){
+read_enemies();
+} //endif // editor_on=0 after toggling,
+} //endif
+
+if( key==Asc("Ä")){ //  clear world - remove this for game release
+for(j=0 ;j<= 100 ;j+=1){
+for(i=0 ;i<= 1000 ;i+=1){
+world[i][j]=0;
+} //next
+} //next
+} //endif
+
+if( key==Asc("L")){ //  reload game
+game_over=1;
+} //endif
+
+ //  player keys
+if( key==Asc(" ")){ //  player attacks
+if( death==0){
+if( p__anistate!=p__attack){
+chan_swish=PlaySound(s_swish);
+//chan_swish=PlaySound(s_music);
+p__anistate=p__attack;
+p_ani_c=p_anilo[p__anistate];
+p_attacking=1;
+p__old_anistate=p__anistate;
+} //endif
+} //endif
+} //endif
+
+
+ //  check cursor keys
+x_key=0;
+if( (editor_on==0) &&(death==0)){
+if( KeyDown(205)){ //  right
+p__dir=0;
+if( (p_attacking==0)){
+if( y_speed==0){
+if( p__anistate!=p__run){
+p__anistate=p__run;
+p_ani_c=p_anilo[p__anistate];
+} //endif
+}else{
+if( (p__anistate!=p__jump2) && (p__anistate!=p__salto)){
+p__anistate=p__jump2;
+p_ani_c=p_anilo[p__anistate];
+} //endif
+} //endif
+} //endif
+x_speed=x_speed+x_speed_add;
+if( x_speed > x_speed_max){
+x_speed=x_speed_max;
+} //endif
+x_key=1;
+} //endif
+
+if( KeyDown(203)){ // left
+p__dir=1;
+if( (p_attacking==0)){
+if( y_speed==0){
+if( p__anistate!=p__run){
+p__anistate=p__run;
+p_ani_c=p_anilo[p__anistate];
+} //endif
+}else{
+if( (p__anistate!=p__jump2) && (p__anistate!=p__salto)){
+p__anistate=p__jump2;
+p_ani_c=p_anilo[p__anistate];
+} //endif
+} //endif
+} //endif
+x_speed=x_speed-x_speed_add;
+if( x_speed < -x_speed_max){
+x_speed=-x_speed_max;
+} //endif
+x_key=1;
+} //endif
+
+
+if (x_key==0) {  //  no left right curserkey pressed, p anistop walking
+if( (p_attacking==0)){
+if( y_speed==0){
+if( p__anistate!=p__idle2){
+p__anistate=p__idle2;
+p_ani_c=p_anilo[p__anistate];
+} //endif
+}else{
+if( y_speed<0){
+if( p__anistate!=p__jump){
+p__anistate=p__jump;
+p_ani_c=p_anilo[p__anistate];
+} //endif
+}else{
+if( p__anistate!=p__jump2){
+p__anistate=p__fall;
+p_ani_c=p_anilo[p__anistate];
+} //endif
+} //endif
+} //endif
+
+} //endif
+x_speed=(x_speed*.8) ; //  brake always, slow down to zero if no left/right key pressed
+if( Abs(x_speed)<0.02){
+x_speed=0;
+} //endif
+
+
+
+}else{ //  left or right cursor pressing
+if( y_speed==0){
+if( s_step.ended!=0 ){ //  p walk sound
+chan_step=PlaySound(s_step);
+} //endif
+} //endif
+} //endif // x_key=0?
+
+
+ //  update player x pos
+player_x=player_x+x_speed;
+if( player_x>(1000-32)){
+player_x=(1000-32);
+} //endif
+if( player_x<1){
+player_x=1;
+} //endif
+
+
+}else{ //  cursor controls for editor----------
+
+if( death==0){
+if( KeyDown(203)){
+player_xe=player_xe-.5;
+} //endif
+
+if( KeyDown(205)){
+player_xe=player_xe+.5;
+} //endif
+
+if( KeyDown(200)){
+player_ye=player_ye-.5;
+} //endif
+
+if( KeyDown(208)){
+player_ye=player_ye+.5;
+} //endif
+
+if( player_xe<1){
+player_xe=1;
+} //endif
+if( player_xe>(1000-32)){
+player_xe=(1000-32);
+} //endif
+
+if( player_ye<1){
+player_ye=1;
+} //endif
+if( player_ye>90){
+player_ye=90;
+} //endif
+
+player_x=player_xe;
+player_y=player_ye;
+
+} //endif //  death?
+
+} //endif //  editor_on=0 , game controls only
+
+
+
+ //  calc bg parallax x
+if( (player_x>1) && (player_x<(1000-32))){
+ for(i=1 ;i<= 5  ;i+=1){ // 1 to 8
+  i2=i;
+  if( i== 5){
+   i2=i+1;
+  } //endif
+  if( x_speed!=0){
+   if( x_speed>0.04){
+    bgx[i]=bgx[i]+(i2/8.0);
+   } //endif
+   if( x_speed<-0.04){
+    bgx[i]=bgx[i]-(i2/8.0);
+   } //endif
+  } //endif
+  if( bgx[i]>440){
+   bgx[i]=bgx[i]-440;
+  } //endif
+  if( bgx[i]<0){
+   bgx[i]=bgx[i]+440;
+  } //endif
+ } //next
+} //endif
+
+
+
+ // player controls Y  ---------------------------------------------
+ // jump
+if( (KeyDown(200)==1) && (jump_block==0) && (jumping==0) && (y_speed==0) && (death==0)){
+chn=PlaySound(s_jump);
+jumping=1;
+jump_count=0;
+jump_block=1;
+} //endif
+
+if( jumping==1){
+y_speed=y_speed+jump_curve[jump_count];
+if( jump_count<=150){
+jump_count=jump_count+3;
+}else{
+jumping=0;
+} //endif
+} //endif
+
+ //  p screen offset in tiles [eg 4 * 32]
+pla_xo=4.5;
+pla_yo=5;
+
+
+
+ //  check tile under player actions------------------------------------------------------------------
+ //  ------------------------------------------------------------------------------------
+p_tile_action =tiles_action[ (world[ Floor(player_x+pla_xo)][Floor(  (player_y-1)+pla_yo)])];
+p_tile_canstandon=tiles_action[world[ Floor(player_x+pla_xo)][Floor(player_y+pla_yo)] ] & 1;
+p_tile_savepoint = p_tile_action & 2;
+p_tile_bonus = p_tile_action & 4;
+p_tile_death = p_tile_action & 8;
+p_tile_life = p_tile_action & 512;
+
+if( (editor_on==0) && (death==0)){
+if( p_tile_savepoint!=0){ //  is savepoint
+msg("SAVEPOINT");
+chan_bonus1=PlaySound(s_bonus1);
+world[ Floor(player_x+pla_xo)][Floor((player_y-1)+pla_yo)]=0;
+start_x=player_x;
+start_y=(Floor(player_y)-0.5); // -0.5
+fx_c[fx_slot]=50;
+fx_x[fx_slot]=player_x;
+fx_y[fx_slot]=Floor(player_y);
+fx_img[fx_slot]=fx_img_orig[0]; // blue ministar
+fx_what_fx[fx_slot]=0;
+fx_slot=fx_slot+1;
+if( fx_slot>fx_max){
+fx_slot=0;
+} //endif
+p_score=p_score+500;
+} //endif
+
+if( p_tile_bonus!=0){ //  is bonus
+ // msg("bonus!")
+chan_bonus1=PlaySound(s_bonus1);
+world[ Floor(player_x+pla_xo)][Floor((player_y-1)+pla_yo)]=0;
+fx_c[fx_slot]=50;
+fx_x[fx_slot]=player_x;
+fx_y[fx_slot]=Floor(player_y);
+fx_img[fx_slot]=fx_img_orig[1]; // red5 ministar
+fx_what_fx[fx_slot]=1;
+fx_slot=fx_slot+1;
+if( fx_slot>fx_max){
+fx_slot=0;
+} //endif
+p_score=p_score+100;
+} //endif
+
+if( p_tile_life!=0){ //  is additional life
+msg("LIFE");
+chan_bonus2=PlaySound(s_bonus2);
+world[ Floor(player_x+pla_xo)][Floor((player_y-1)+pla_yo)]=0;
+fx_c[fx_slot]=50;
+fx_x[fx_slot]=player_x;
+fx_y[fx_slot]=Floor(player_y);
+fx_img[fx_slot]=fx_img_orig[1]; // red5 ministar
+fx_what_fx[fx_slot]=1;
+fx_slot=fx_slot+1;
+if( fx_slot>fx_max){
+fx_slot=0;
+} //endif
+p_score=p_score+100;
+lives=lives+1;
+if( lives>max_lives){
+lives=max_lives;
+} //endif
+} //endif
+
+if( p_tile_death!=0){ //  is death trap
+death=1;
+lives=lives-1;
+if( lives<=0){
+lives=0;
+game_over=-1; //  note, -1 allows death sequence befor going to start screen
+} //endif
+going_under=400;
+p__anistate=p__death;
+p_ani_c=p_anilo[p__anistate];
+x_speed=0;
+y_speed=0;
+chan_pain=PlaySound(s_pain);
+fx_c[fx_slot]=150;
+fx_x[fx_slot]=player_x;
+fx_y[fx_slot]=Floor(player_y);
+fx_img[fx_slot]=fx_img_orig[3]; // blood
+fx_what_fx[fx_slot]=2;
+fx_slot=fx_slot+1;
+if( fx_slot>fx_max){
+fx_slot=0;
+} //endif
+} //endif
+} //endif
+
+
+
+
+
+ // hit standable tile??------------------------
+if( (y_speed>0) && (p_tile_canstandon==1) && ((player_y-Floor(player_y))<0.3)){
+chan_step=PlaySound(s_step);
+jumping=0;
+y_speed=0;
+player_y=Floor(player_y);
+} //endif
+
+ //  falling from the slippry tile edge
+if( (jumping==0) && (p_tile_canstandon==0)){
+y_speed=0.2;
+} //endif
+
+if( (editor_on==0)){
+ //  update player Y
+player_y=player_y+y_speed;
+} //endif
+
+ // game_over hit sea  ------------------------------------------------------ hit sea check
+if( (player_y>(100-10)) && (death==0)){
+chan_pain=PlaySound(s_pain);
+sea_funeral=1;
+lives=lives-1;
+if( lives<=0){
+lives=0;
+game_over=-1;
+} //endif
+death=1;
+going_under=128;
+p__anistate=p__death;
+p_ani_c=p_anilo[p__anistate];
+x_speed=0;
+y_speed=0;
+player_y=(100-10);
+}else{
+if( (sea_funeral!=0)){
+player_y=(100-10);
+} //endif
+} //endif
+
+if( player_y<0){
+player_y=0 ; //  prevent player walking out of array
+} //endif
+
+ // calc parallax Y
+for(i=1 ;i<= 6 ;i+=1){
+if( i==5){
+if( sea_funeral==0){
+bgy[i]=((player_y-50)/2.0) *((i)*-2.0);
+} //endif
+}else{
+if( sea_funeral==0){
+bgy[i]=((player_y-50)/2.0) *((i-1)*-2.0);
+} //endif
+} //endif
+} //next
+bgx[1]=0;
+bgy[1]=0;
+
+
+ // draw parallax------------------ (i wish I had subpixel positioning. it's jittering a lot. may drop a layer or 2)
+for(i=1 ;i<= 5 ;i+=1){ // 1 to 6
+ylo=0;
+if( i>1){
+ylo=180;
+} //endif
+DrawImage( bg[i],   -Floor(bgx[i]),Floor(bgy[i]+ylo) );
+DrawImage( bg[i],439-Floor(bgx[i]),Floor(bgy[i]+ylo) );
+// this would be subpixel:
+//DrawImage( bg[i],   -(bgx[i]),(bgy[i]+ylo) );
+//DrawImage( bg[i],439-(bgx[i]),(bgy[i]+ylo) );
+} //next
+
+
+
+
+ // draw tiles--------------------------------------------------------------
+e_dum=(16+32+64+128);
+for(j=-4 ;j<= 12  ;j+=1){ //  must render a bit more than onscreen][ due to tiles bigger than 32x32...
+ for(i=-5 ;i<= 14 ;i+=1){
+
+  tlx=Floor(player_x)+i;
+  tly=Floor(player_y)+j;
+  if( (tlx>=0) && (tlx<1000) && (tly>=0) && (tly<100)){ //  prevent array access off boundries
+   tile_index=world[Floor(player_x)+i][Floor(player_y)+j];
+   show=1;
+   hasbits_dum=(tiles_action[tile_index] & e_dum); // check whether it's enemy or enemy dir switch tile
+   if( hasbits_dum!=0){
+    show=0; // hide these tiles, used by the editor
+   } //endif
+   if( (tile_index>0) &&    (    (editor_on==1)   ||    (show != 0)   )  ){
+    if( tiles_align[tile_index]==0){
+     x=16+(i*32)+(1.0-((player_x-Floor(player_x)))*32.0);
+     y=(j*32)+(1.0-((player_y-Floor(player_y)))*32.0);
+    }else{ //  align to bottom?
+     x=16+(i*32)+(1.0-((player_x-Floor(player_x)))*32.0);
+     y=(  (j*32)+(1.0-((player_y-Floor(player_y)))*32.0)  )-(tiles_h[tile_index]-32);
+    } //endif
+    DrawImage( tile_img_smart(  tile_index ,1 )  ,x,y );
+   } //endif // if index <>0
+  } //endif //  prevent array access off boumdries
+ } //next j
+} //next i
+
+
+
+ // update and draw enemies--------------------------------------------------  draw enemies EEEEEE
+px=(player_x/32.0)+144+2;
+py=(player_y/32.0)+(157-32)+2;
+
+for(i=0 ;i<= enemy_z-1 ;i+=1){
+ //  bug: dead enemies sliding 1 pix jitter, rounding prob?
+x=Floor(2.5+(enemy_x[i]+enemy_xoff[i]-player_x)*32.0);
+y=Floor(2.5+(enemy_y[i]+enemy_yoff[i]-player_y)*32.0);
+
+// .i_am_debugging_here;
+ // orig
+ //  x=(2+(enemy_x[i]+enemy_xoff[i]-player_x)*32.0)
+ //  y=(2+(enemy_y[i]+enemy_yoff[i]-player_y)*32.0)
+
+tile_index=world[   Floor(enemy_x[i]+enemy_xoff[i])   ][   Floor(enemy_y[i]+enemy_yoff[i])   ];
+if( enemy_dead[i]==0){
+is_dir_switch=tiles_action[tile_index] & 128;
+if( is_dir_switch!=0){ //  is dir switch under enemy
+enemy_speed[i]=-enemy_speed[i];
+enemy_dir[i]=enemy_dir[i] ^ 1;
+} //endif
+if(    (  e__anistate[i]!=e__attack[enemy_which_ani[i]]  )  && (  e__anistate[i]!=e__death[enemy_which_ani[i]]  )){
+enemy_xoff[i]=enemy_xoff[i]+enemy_speed[i];
+} //endif
+e_ani_c[i]=e_ani_c[i]+.18;
+
+if( death==0){
+if( e_ani_c[i]>=e_anilo[  e__anistate[i]+1][enemy_which_ani[i]  ]){
+if( e__anistate[i]==e__death[enemy_which_ani[i]]){
+e_ani_c[i]=e_anilo[e__anistate[i]+1][enemy_which_ani[i]]-1; //  do not loop when enemy died
+}else{
+e_ani_c[i]=e_anilo[e__anistate[i]][enemy_which_ani[i]]; //  otherwise just loop the current ani
+} //endif
+} //endif
+}else{
+if( e_ani_c[i]>=e_anilo[  e__anistate[i]+1][enemy_which_ani[i]  ]){
+if( e__anistate[i]==e__death[enemy_which_ani[i]]){
+e_ani_c[i]=e_anilo[e__anistate[i]+1][enemy_which_ani[i]]-1; //  do not loop when enemy died
+}else{
+e__anistate[i]=e__run[enemy_which_ani[i]];
+e_ani_c[i]=e_anilo[e__anistate[i]][enemy_which_ani[i]];
+} //endif
+} //endif
+} //endif
+dis=27; //  attack when closer than
+if( (Abs(x-px)<dis) && (Abs(y-py)<dis) && (e__anistate[i]!=e__attack[ enemy_which_ani[i] ]) && (death==0) && (editor_on==0)){ //  enemy attack player
+e__anistate[i]=e__attack[enemy_which_ani[i]];
+e_ani_c[i]=e_anilo[e__anistate[i]][enemy_which_ani[i]];
+// turn to player for attack; //  here's a bug, gotta prevent this when enemy over switch tile
+if( px<x){
+enemy_dir[i]=1;
+enemy_speed[i]=-Abs(enemy_speed[i]);
+}else{
+enemy_dir[i]=0;
+enemy_speed[i]=Abs(enemy_speed[i]);
+} //endif
+
+if( (p__anistate==p__attack) && (enemy_which_ani[i]!=2)){ //  kill the enemy, when player swings his sword
+ //  except for the mean, invincible enemy nr 2
+ //  here we could use enemy_which_ani[i] (0,1 or 2 ) to play individual death screams
+chan_enemy_dies1=PlaySound(s_enemy_dies1);
+chan_sword=PlaySound(s_sword);
+e__anistate[i]=e__death[enemy_which_ani[i]];
+e_ani_c[i]=e_anilo[e__anistate[i]][enemy_which_ani[i]];
+enemy_dead[i]=1;
+p_score=p_score+1000;
+}else{ //  lazy ass player gets slayed due to not using sword
+chan_pain=PlaySound(s_pain);
+chan_sword=PlaySound(s_sword);
+sea_funeral=0;
+death=1;
+going_under=400;
+p__anistate=p__death;
+p_ani_c=p_anilo[p__anistate];
+x_speed=0;
+y_speed=0;
+fx_c[fx_slot]=150;
+fx_x[fx_slot]=player_x;
+fx_y[fx_slot]=player_y;
+fx_img[fx_slot]=fx_img_orig[3]; // blood fx - kinda
+fx_what_fx[fx_slot]=2;
+fx_slot=fx_slot+1;
+if( fx_slot>fx_max){
+fx_slot=0;
+} //endif
+lives=lives-1;
+if( lives<=0){
+lives=0;
+game_over=-1;
+} //endif
+} //endif //  p attacking?
+} //endif // within attack range
+
+ //  end attack when distance increased or player dead
+if( (Abs(x-px)>=dis) || (Abs(y-py)>=dis)){
+if( e__anistate[i]==e__attack[ enemy_which_ani[i] ]){
+e__anistate[i]=e__run[enemy_which_ani[i]];
+e_ani_c[i]=e_anilo[e__anistate[i]][enemy_which_ani[i]];
+} //endif
+} //endif
+
+
+ // draw enemies
+ //    If (x_screen>-100) And (x_screen<=320) And (y_screen>-100) And (y_screen<=240)
+if( (x>-100) && (x<=420) && (y>-100) && (y<=340)){
+if( enemy_dir[i]==0){
+DrawImage( e_ani2[Floor(e_ani_c[i])][enemy_which_ani[i]],x-8,y-4 );
+}else{
+DrawImage( e_ani[Floor(e_ani_c[i])][enemy_which_ani[i]],x-8,y-4 );
+} //endif
+} //endif
+
+}else{ //  enemy is dead
+
+e_ani_c[i]=e_ani_c[i]+.18;
+if( e_ani_c[i]>=e_anilo[  e__anistate[i]+1][enemy_which_ani[i]  ]){
+e_ani_c[i]=e_anilo[e__anistate[i]+1][enemy_which_ani[i]]-1; //  do not loop when enemy died
+} //endif
+ //   x_screen=(x-(player_x/32.0))
+ //   y_screen=(y-(player_y/32.0))
+
+ //    If (x_screen>-80) And (x_screen<400) And (y_screen>-80) And (y_screen<400)
+if( (x>-100) && (x<=420) && (y>-100) && (y<=340)){
+if( enemy_dir[i]==0){
+DrawImage( e_ani2[Floor(e_ani_c[i])][enemy_which_ani[i]],x-8,y-4 );
+}else{
+DrawImage( e_ani[Floor(e_ani_c[i])][enemy_which_ani[i]],x-8,y-4 );
+} //endif
+} //endif
+} //endif //  if enemy not dead
+} //next
+
+
+
+ //  update + ------------------------------------------------------ draw player----------------------------
+
+if( death==1){ //  death sequence?
+if( p_ani_c<p_anilo[p__anistate+1]-1){
+p_ani_c=p_ani_c+.09;
+} //endif
+going_under=going_under-3;
+if( going_under<=0){
+sea_funeral=0;
+death=0;
+player_x=start_x;
+player_y=start_y;
+y_speed=-0.002;
+stop_all_fx();
+if( game_over==-1){
+game_over=1;
+DrawImage( title_screen,0,0);
+
+} //endif
+} //endif
+drowning=128-going_under;
+if( sea_funeral==0){
+drowning=0;
+} //endif
+if( p__dir==0){
+DrawImage(p_ani2[Floor(p_ani_c)],136,(125)+(drowning));
+}else{
+DrawImage(p_ani[Floor(p_ani_c)],136,(125)+(drowning));
+} //endif
+}else{ //  no death sequence
+if( p__anistate==p__idle2){
+p_ani_c=p_ani_c+0.09; //  slower ani for idle
+}else{
+p_ani_c=p_ani_c+0.18;
+} //endif
+if( p_ani_c>=p_anilo[p__anistate+1]){
+if( (p__anistate==p__jump2) || (p__anistate==p__salto) ){ //  insert salto occasionally while jumping
+if( Rand(0,100)>60){
+p__anistate=p__salto;
+p_ani_c=p_anilo[p__anistate];
+}else{
+p__anistate=p__jump2;
+p_ani_c=p_anilo[p__anistate];
+} //endif
+}else{
+p_ani_c=p_anilo[p__anistate]; //  otherwise just loop the current ani
+} //endif
+if( p_attacking==1 ){ //  end sword hit and resume prev- sequence
+p_attacking=0;
+p__anistate=p__old_anistate;
+p_ani_c=p_anilo[p__anistate];
+} //endif
+} //endif
+if( p__dir==0){
+DrawImage( p_ani2[Floor(p_ani_c)],136,125 );
+}else{
+DrawImage( p_ani[Floor(p_ani_c)],136,125 );
+} //endif
+} //endif //  death or not
+
+
+
+if( (editor_on==1)){
+Color( 255,255,0);
+Text( 0,220,player_x+"   "+player_y);
+} //endif
+
+
+
+
+ // draw procedural animated fx------------------------
+for(ii=0 ;ii<= fx_max ;ii+=1){
+if( fx_c[ii]>0){ // fx countdown
+fx_c[ii]=fx_c[ii]-1;
+x=  32+(1.0-(((player_x+.5))-(Floor(fx_x[ii]+.5)))        *32.0)+120;
+y= -16+(1.0-(((player_y+.5))-(Floor(fx_y[ii]+.5)))        *32.0)+160;
+
+if( fx_what_fx[ii]==0){ //  random stars explosion
+for(i=0 ;i<= 5+(fx_c[ii]) ;i+=1){
+r=Rand(0,360);
+r2=Rand(0,12+(50-fx_c[ii]));
+DrawImage( fx_img[ii],16+Sin(r)*r2+x,16+Cos(r)*r2+y );
+} //next // i
+} //endif
+
+if( fx_what_fx[ii]==1){ //  sinus explo...
+for(i=0 ;i<= 5+(fx_c[ii]) ;i+=1){ //  To 0 Step -1
+im=25+(50-fx_c[ii])-i;
+r=Rand(-2,2);
+r2=Rand(0,12+(50-fx_c[ii]));
+DrawImage( fx_img[ii],16.0+Sin(i*32)*(im)+x,16.0+Cos(180+i*32)*(im)+y );
+} //next // i
+} //endif
+
+if( fx_what_fx[ii]==2){ //  player dies fx ... not happy with this
+for(i=0 ;i<= 155-(fx_c[ii]) ;i+=2){ //  To 0 Step -1
+DrawImage(fx_img[ii],x+20+i/4.0,y+26);
+DrawImage(fx_img[ii],x+20-i/4.0,y+26);
+} //next // i
+} //endif
+
+} //endif
+} //next // ii
+
+
+
+ //  draw hud elements................................................
+Color(0,255,0);
+for(i=0 ;i<= lives-1 ;i+=1){
+DrawImage( lives_left, 300-i*10,11 );
+} //next
+
+for(i=lives ;i<= 9 ;i+=1){
+DrawImage( lives_lost, 300-i*10,11 );
+} //next
+
+
+myText(10,10,("SCORE "+p_score));
+if( game_over==-1){
+msg("GAME OVER");
+} //endif
+
+update_msg();
+
+mx=MouseX();
+my=MouseY();
+
+ //  editor------------------------------------------------------------------------------------------
+ //  ------------------------------------------------------------------------------------------------
+if( editor_on==1){
+mouse_tilex=Floor(player_x)+(mx/32);
+mouse_tiley=Floor(player_y)+(my/32);
+
+ // tile under mouse marker
+Color (255,255,255);
+Rect( 16+(Floor(mx/32)*32)+(1.0-((player_x-Floor(player_x)))*32.0),    (Floor(my/32)*32)+(1.0-((player_y-Floor(player_y)))*32.0),32,32,0 );
+ // bg menu
+ // draw selectable tiles
+Color( 255,63,255);
+Rect( 16,0,320-32,64,1);
+tile_9=9;
+if( (tile_max-1)<tile_9){
+tile_9=(tile_max-1);
+} //endif
+for(i=0 ;i<= tile_9-1 ;i+=1){
+img=tile_img_smart(  i+editor_first ,0 );
+if( img!=0){
+Viewport( 16+i*32,0,32,32 );
+DrawImage( img, 16+i*32,0);
+Viewport( 0,0,320,240);
+} //endif
+} //next
+for(i=0 ;i<= tile_9-1 ;i+=1){
+img=tile_img_smart(  editor_picks[i] ,0 );
+if( img!=0){
+Viewport( 16+i*32,32,32,32 );
+DrawImage( img, 16+i*32,32);
+Viewport( 0,0,320,240);
+} //endif
+} //next
+ // draw some rects around tiles etc
+Color( 20,20,20);
+for(j=0 ;j<= 1 ;j+=1){
+for(i=0 ;i<= 8 ;i+=1){
+Rect( 16+i*32,j*32,33,33,0);
+} //next
+} //next
+
+
+ // draw tile selection scroll buttons
+DrawImage( scroll_left,0,0);
+DrawImage( scroll_right,304,0);
+
+
+if( my>64){ //  set tile in world by lmb
+if( MouseDown(1)==1){
+world[mouse_tilex][mouse_tiley]=editor_pick;
+} //endif
+if( MouseDown(2)==1 ){ //  erase tile in world
+world[mouse_tilex][mouse_tiley]=0;
+} //endif
+}else{ //  choose tile from top row
+if( (my<32) && (mx>16) && (mx<304)){
+if( (MouseDown(1)==1) && (block_mouse==0)){
+block_mouse=1;
+editor_pick=((mx-16)/32)+editor_first;
+already_gotit=0; //  put into 2nd row (last used tiles) when not already there
+for(i=0 ;i<= 8 ;i+=1){
+if( editor_picks[i]==editor_pick){
+already_gotit=1;
+} //endif
+} //next
+if( already_gotit==0){
+for(i=8 ;i>= 1 ;i+=-1){
+editor_picks[i]=editor_picks[i-1];
+} //next
+editor_picks[0]=editor_pick;
+} //endif
+} //endif
+} //endif
+if( (my>32) && (my<64) &&(mx>16) && (mx<304)){ //  select tile from 2nd row
+if( (MouseDown(1)==1) && (block_mouse==0)){
+block_mouse=1;
+editor_pick=editor_picks[((mx-16)/32)];
+} //endif
+} //endif
+if( MouseDown(1)==1){
+if( (my<32) && (mx<16)){ //  scroll top row <
+editor_first=editor_first-1;
+// Delay 50;
+if( editor_first<1){
+editor_first=1;
+} //endif
+} //endif
+if( (my<32) && (mx>304)){ // scroll top row >
+editor_first=editor_first+1;
+// Delay 50;
+if( editor_first>tile_max-9){
+editor_first=tile_max-9;
+} //endif
+} //endif
+} //endif
+} //endif
+} //endif // eo if editor_on------------------------------------------------------------
+
+
+ // update animated tiles
+update_ani_tiles();
+
+ //  hmm, guess that needs to be here for some reason
+if( MouseDown(1)==0){
+block_mouse=0;
+} //endif
+if( KeyDown(200)==0){
+jump_block=0;
+} //endif
+
+ //  at last show the rendered frame
+
+
+//XXXXXXXXXXXXXXXXXXXXXXXXXXXX end of: Insert your Mainloop Content here!
+
+
+
+bb2js__GetKey=0; // erase Inkey "buffer"
+var hang=33;
+if(bb2js__end_it_all==0){
+  bb2js__currenttime=new Date();
+  hang=17-(bb2js__currenttime.getTime()-bb2js__millisecs);
+  if(hang<5){hang = 5;} // prevent cpu overload 
+  renn=self.setTimeout('bb2js__mythread()',""+hang); // 33=30 hz, 17=60hz ...
+ }else{ 
+    //  alert("Program has ended.");
+ Cls();
+ Color(0,255,0);
+ x=10;
+ y=50;
+ Text(x,y,"                                              Credits:");
+ Text(x,y+16,"Code:  Dieter Marfurt");
+ Text(x,y+32,"Music: http://www.matthewpablo.com");
+ Text(x,y+48,"Player Char: https://rvros.itch.io/");
+ Text(x,y+64,"Enemy Char: https://luizmelo.itch.io/");
+ Text(x,y+80,"Enemy Spider: https://Tuomo-Untinen.itch.io/");
+ Text(x,y+96,"Bitmap Font: https://zingot.itch.io/");
+ Text(x,y+112,"Background Layers: https://saukgp.itch.io");
+ Text(x,y+144,"Thanks for Playing!");
+ s_music.pause();
+ }
+
+} // eo mythread()
+//IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+//IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+//IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+//IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+//IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+//IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+//IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+//IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+//IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+//IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+//IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+//IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+//IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+//IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+//IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+//IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+//IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+//IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+//IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+//IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+//IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII
+
+// dies ist die initialisierung, gestartet nach aufbau des html seite(am ende dieses codes)
+function bb2js__myinit()
+{
+ bb2js__meldung_id = document.getElementById("meldung");
+ var body=document.getElementById("boody"); // geht nicht
+ body.style.overflow="hidden";  // Das geht! clipping auf browserfenster grösse!
+
+  body.style.position = "absolute";
+/*
+// dies clippt die ganze seite! nur gut wenn game in fullscreen osä
+  body.style.clip="rect(0px,"+bb2js__game_width+"px,"+bb2js__game_height+"px,0px)"; // y,x2,y2,x ... wtf.. geht!
+*/
+
+ bb2js__canvas = document.getElementById("mycanvas"); 
+// global canvas context
+ bb2js__ctx = document.getElementById('mycanvas').getContext('2d');
+
+/* 
+// dies skaliert und positioniert den canvas, maus koordinaten müssten entsprechend multipliziert werden
+id=bb2js__canvas;
+   id.style.position = "absolute";
+   id.style.top = "30px";
+   id.style.left = "30px";
+   id.style.width = "800px"; // nötig?
+   id.style.height = "600px";
+*/
+// scale up canvas
+id=bb2js__canvas;
+   id.style.position = "absolute";
+   id.style.top = "0px";
+   id.style.left = "0px";
+   id.style.width = "640px"; // nötig?
+   id.style.height = "480px";
+
+// prevent canvas blur
+//bb2js__canvas.webkitImageSmoothingEnabled = false;
+//bb2js__canvas.mozImageSmoothingEnabled = false;
+bb2js__ctx.imageSmoothingEnabled = false;
+//imageSmoothingEnabled = false;
+
+// id.style.fontsmooth = "none"; // i fear this exists only in my fantasy - sorry for the blurry credits after hitting ESC
+// I will use bitmapfonts, also for small text - one day.
+
+ bb2js__currenttime = new Date();
+ bb2js__millisecs = bb2js__currenttime.getTime();
+ bb2js__millisecs=bb2js__millisecs;
+deviceorientationinit();
+resizeinit();
+ mausinit();
+ keyinit();
+myresizhandler();
+
+
+Color(255,255,255);
+ClsColor(0,0,0);
+
+// correct tiles width + height, as now loaded
+for(i=0;i<tile_max;i++)
+{
+tiles_w[i]=tile_img_smart(  i ,0).naturalWidth;
+tiles_h[i]=tile_img_smart(  i ,0).naturalHeight;
+}
+
+read_enemies();
+
+bb2js__mousedown=0;
+// HidePointer();
+
+ //  some info before starting
+
+DrawImage(title_screen,0,0);
+Color( 0,0,0); //  "darkening" screen for message
+for(i=0 ;i<= 640 ;i+=2){
+Line (i,0,0,i);
+} //next
+myText( 72,127,"Run / Jump:");
+myText( 72,145,"Cursor keys");
+myText( 72,163,"Use Sword:");
+myText( 72,181,"Space");
+myText (17,220,"Hit Space to Start");
+
+myWaitKey();
+} // eo func myinit
+
+function myWaitKey() // this acrually starts the game, not to be called from inside the game, but gives a hint on how to WaitKey at the end of a function
+ {
+  key=GetKey();
+  if(key!=0)
+  {
+   chan_music=PlaySound(s_music);
+   s_music.volume=0.5;
+   s_music.loop=true;
+   bb2js__GetKey=0;
+   key=0;
+   renn=self.setTimeout('bb2js__mythread()',"33");
+  }
+  else
+  {
+    renn=self.setTimeout('myWaitKey()',"33");
+ }
+}
+
+//FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+//FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+//FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+//FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+//FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+//FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+//FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+//FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+//FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+//FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+//FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+//FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+
+function GraphicsWidth(){
+  return bb2js__game_width;
+}
+
+function GraphicsHeight(){
+  return bb2js__game_height;
+}
+
+
+function GetKey(){
+  return bb2js__GetKey;
+}
+
+function KeyDown(k){
+  if(k==200){return bb2js__cursor_up;}
+  if(k==208){return bb2js__cursor_down;}
+  if(k==205){return bb2js__cursor_left;}
+  if(k==203){return bb2js__cursor_right;}
+  return 0;
+}
+
+
+function LoadSound(path){
+var x = document.createElement('audio');
+x.src=path;
+dumpfbacke=dumpfbacke+"<audio src='"+path+"' preload muted style='position: absolute; top: 10px; left: 330px; display: none'>";
+return x;
+}
+
+function PlaySound(hand){ // plays a sound, or if already playing, resets playing-position to start
+if(hand.ended==false)
+{hand.currentTime = 0;}
+hand.play();
+}
+
+
+//-------------------------------------gfx
+function LoadFont(fn,s){
+  bb2js__ctx.font = s+'px '+fn;
+  //  bb2js__ctx.font = '48px serif';
+  //  only one font at a time, is set when loaded
+}
+
+function SetFont(fn){
+}
+
+function FreeFont(fn){
+}
+
+function Flip(fn){
+}
+
+function VWait(){
+}
+
+
+function Text(x,y,lin){
+  bb2js__ctx.fillText(lin, x, y); // blurry when canvas scaled, use bitmap instead
+}
+
+
+function Cls(){
+ bb2js__ctx.fillStyle = 'rgb('+bb2js__ClsRed+', '+bb2js__ClsGreen+', '+bb2js__ClsBlue+')';
+ bb2js__ctx.fillRect(0,0,bb2js__game_width,bb2js__game_height);
+ bb2js__ctx.fillStyle = 'rgb('+bb2js__Red+', '+bb2js__Green+', '+bb2js__Blue+')';
+}
+
+
+function Rect(x,y,w,h,f){
+ if(f==1){bb2js__ctx.fillRect(x,y,w,h);}
+ else    {bb2js__ctx.strokeRect(x,y,w,h);}
+}
+
+function Line(x,y,x2,y2){
+bb2js__ctx.beginPath();
+if(  (Math.abs(x-x2))<(Math.abs(y-y2))   )
+ {
+ bb2js__ctx.moveTo(x,y);
+ bb2js__ctx.lineTo(x2,y2);
+ bb2js__ctx.lineTo(x2-1,y2);
+ bb2js__ctx.lineTo(x-1,y);
+ bb2js__ctx.closePath();
+ bb2js__ctx.fill();
+ }
+ else
+ {
+ bb2js__ctx.moveTo(x,y);
+ bb2js__ctx.lineTo(x2,y2);
+ bb2js__ctx.lineTo(x2,y2-1);
+ bb2js__ctx.lineTo(x,y-1);
+ bb2js__ctx.closePath();
+ bb2js__ctx.fill();
+ }
+
+}
+
+function Plot(x,y){
+ bb2js__ctx.fillRect(x,y,1,1);
+}
+
+function ReadPixel( x, y){
+//note: crashes when loaded locally ( not from server)
+// bb2js__ctx = document.getElementById('mycanvas').getContext('2d');
+// if(bb2js__isBraveBrowser=1){return 0;}
+var pix = bb2js__ctx.getImageData(x, y, 1, 1).data;
+var rgb=((pix[0] << 16) | (pix[1] << 8) | pix[2]);
+return rgb;
+}
+
+function rgbToHex(r, g, b){
+    if (r > 255 || g > 255 || b > 255)
+        throw "Invalid color component";
+    return ((r << 16) | (g << 8) | b).toString(16);
+}
+
+function ImageWidth(img){
+return img.naturalWidth;
+}
+function ImageHeight(img){
+return img.naturalHeight;
+}
+
+function CopyRect(x,y,w,h,x2,y2){
+//note: crashes when loaded locally ( not from server)
+// if(bb2js__isBraveBrowser=1){return 0;}
+// bb2js__ctx = document.getElementById('mycanvas').getContext('2d');
+    var p = bb2js__ctx.getImageData(x, y, w, h);
+    bb2js__ctx.putImageData(p, x2, y2);
+}
+
+
+function Color(r,g,b){
+bb2js__Red=r;
+bb2js__Green=g;
+bb2js__Blue=b;
+ bb2js__ctx.fillStyle = 'rgb('+bb2js__Red+', '+bb2js__Green+', '+bb2js__Blue+')';
+}
+
+function ClsColor(r,g,b){
+bb2js__ClsRed=r;
+bb2js__ClsGreen=g;
+bb2js__ClsBlue=b;
+}
+
+//**********************************************************************************************************
+function LoadImage(p){
+var img=new Image();
+img.src=p;
+// we arrange all pics to be page-embeded as <img tags>, so they are all loaded when the game starts.
+// for this purpose we assemble the dumpfbacke string, to be written into the page by body inline script
+// the same is done with LoadSound() btw
+dumpfbacke=dumpfbacke+"<img src='"+p+"' style='position: absolute; top: 10px; left: 330px; display: none'>"
+return img;
+}
+
+function CopyImage(img){
+var img2=new Image();
+img2.src=img.src;
+return img2;
+}
+
+
+// guess got to create an element handle first?
+// there is a whole dilemma with writing and reading pixels of loaded images, which is what createimage is meant for
+// while its easy to do that with ImageData objects, it is very complicated to load such objects with
+// images, other than using tricks like the data on URL, or image data as include files. That is all for security...
+function CreateImage(w,h){
+// img = bb2js__ctx.createImageData(w,h);
+// return img;
+// these are drawn by putImageData
+
+//var img=new Image();
+//img.width=w;
+//img.height=h;
+//return img;
+// these are drawn by drawImage
+//the two system are explicit strangers to eachother.
+}
+
+function DrawImage(img,x,y){
+bb2js__ctx.drawImage(img,x,y);
+}
+
+function DrawBlock(img,x,y){
+bb2js__ctx.drawImage(img,x,y);
+}
+
+function Flip(vwait){
+// does nothing so far
+}
+
+//--------------file io (only 1 open file at a time allowed)
+
+function ReadFile(path){
+// if(path=""){path="bb2js__defaultstorage";}
+
+bb2js__path=path;
+// bb2js__path=bb2js__path.replace("//","///");
+return 1;
+}
+
+function WriteFile(path){
+// if(path=""){path="bb2js__defaultstorage";}
+bb2js__path=path;
+// bb2js__path=bb2js__path.replace("//","///");
+return 1;
+}
+
+function CloseFile(fhandle){
+// bb2js__path="bb2js__defaultstorage";
+}
+
+function WriteString(fhandle, lin){
+// if(bb2js__path=""){bb2js__path="bb2js__defaultstorage";}
+localStorage.setItem(bb2js__path, lin);
+}
+
+function ReadString(fhandle, lin){
+// if(bb2js__path=""){bb2js__path="bb2js__defaultstorage";}
+  var lin = localStorage.getItem(bb2js__path);
+  return lin;
+ }
+
+
+//--------------math
+function bb2js__Min(a,b){
+if(a<b){return a;}
+return b;
+}
+function bb2js__Max(a,b){
+if(a>b){return a;}
+return b;
+}
+
+
+function Rnd(lo,hi){
+var v=(Math.random()*(hi-lo))+lo;
+return v;
+}
+function Rand(lo,hi){
+var v=Math.floor((Math.random()*(hi-lo))+lo);
+return v;
+}
+function SeedRnd(a){
+var dum=" ";
+var dudu=0;
+dum=MilliSecs().toString();
+dum=dum.substr(dum.lenght-3,3);
+var b=0
+b=dun;
+for(i=0;i<b;i++){dudu=MilliSecs();}
+}
+
+
+function Sin(a){
+return Math.sin(a/bb2js__rad_rel);
+}
+
+function Cos(a){
+return Math.cos(a/bb2js__rad_rel);
+}
+function Floor(a){
+return Math.floor(a);
+}
+function Ceil(a){
+return Math.ceil(a);
+}
+function Sgn(a){
+return Math.sign(a);
+}
+
+function Abs(a){
+return Math.abs(a);
+}
+
+function Sqr(a){
+return Math.sqrt(a);
+}
+function Tan(a){
+return Math.tan(a);
+}
+function ASin(a){
+return Math.asin(a/bb2js__rad_rel);
+}
+function ACos(a){
+return Math.acos(a/bb2js__rad_rel);
+}
+function ATan(a){
+return Math.atan(a);
+}
+function ATan2(a,b){
+return Math.atan2(a,b);
+}
+function Exp(a){
+return Math.exp(a);
+}
+
+function Pi(){
+return Math.PI;
+}
+function Log(a){
+return Math.log(a);
+}
+function Log10(a){
+return Math.log10(a);
+}
+
+
+//-------------------- string
+// js uses zero-based indicies, bb uses 1-based, therefor messing around...
+
+function Mid(lin,l,l2){
+return lin.substr(l-1,l2);
+}
+
+function Left(lin,l){
+return lin.substr(0,l);
+}
+function Right(lin,l){
+return lin.substr((lin.length-l),l);
+}
+function Replace(lin,ol,nu){
+return lin.replace(ol,nu);
+}
+function Instr(lin,search,ii){
+return lin.indexOf(search,ii-1)+1;
+}
+function Upper(lin){
+return lin.toUpperCase();
+}
+function Lower(lin){
+return lin.toLowerCase();
+}
+function Chr(a){
+var a=0;
+return a.fromCharCode(a);
+//return String.fromCharCode(a);
+}
+function Asc(c){
+return c.charCodeAt(0);
+}
+function Len(lin){
+return lin.length;
+}
+
+function String(lin,n){
+return lin.repeat(n);
+}
+
+function MilliSecs(){
+ cu=new Date();
+ return cu.getTime();
+}
+function CurrentTime(){
+var today = new Date();
+var time = today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds();
+ return time;
+}
+function CurrentDate(){
+ var today = new Date();
+ var date = today.getFullYear()+'-'+(today.getMonth()+1)+'-'+today.getDate();
+ return date;
+}
+
+
+function HidePointer(){
+ bb2js__canvas = document.getElementById("mycanvas"); 
+ bb2js__canvas.style.cursor = "none";
+}
+function ShowPointer(){
+ bb2js__canvas = document.getElementById("mycanvas"); 
+ bb2js__canvas.style.cursor = "auto";
+}
+
+
+// canvasElement.style.cursor = "none";.
+
+// eo straight forward bb function wraps
+
+function resizeinit() 
+{
+     if (window.ResizeEvent) 
+      {
+        window.addEventListener("resize", myresizehander);
+      } 
+}
+
+function myresizhandler()
+{
+if(window.outerHeight < window.outerWidth)
+ {
+  bb2js__landscapemode=1;
+ }
+else
+ {
+  bb2js__landscapemode=0;
+ }
+}
+
+function  deviceorientationcalibrate()
+ {
+// bb2js__dev_alpha_comfy=0;//bb2js__dev_alpha; // intial device orientation
+// bb2js__dev_beta_comfy=45;//bb2js__dev_beta;
+// bb2js__dev_gamma_comfy=0;//bb2js__dev_gamma;
+ }
+
+
+function deviceorientationinit() 
+{
+     if (window.DeviceOrientationEvent) 
+      {
+        window.addEventListener("deviceorientation", deviceOrientationListener);
+//window.setInterval(deviceorientation,65);
+        bb2js__dev_orientation_support=1;
+      } 
+
+ if(window.outerHeight < window.outerWidth)
+  {
+   bb2js__landscapemode=1;
+  }
+ else
+  {
+   bb2js__landscapemode=0;
+  }
+}
+
+
+
+function deviceOrientationListener(e) 
+{
+ bb2js__dev_alpha=e.alpha;
+ bb2js__dev_beta=e.beta;
+ bb2js__dev_gamma=e.gamma;
+}
+
+
+
+// ---------------------------------------------------------------------------------
+function keyinit()
+{
+  window.captureEvents(Event.KEYPRESS);
+  window.onkeypress= keymerk;
+  window.captureEvents(Event.KEYDOWN);
+  window.onkeydown= keymerk;
+  window.captureEvents(Event.KEYUP);
+  window.onkeyup= keyrelease;
+}
+function keymerk(e)
+{
+  var whatkey = event.keyCode; //get ascii of keyboard input
+  if (whatkey == 37) { bb2js__cursor_right=1; e.preventDefault(); }
+  if (whatkey == 39) { bb2js__cursor_left=1; e.preventDefault(); }
+  if (whatkey == 38) { bb2js__cursor_up=1; e.preventDefault(); }
+  if (whatkey == 40) { bb2js__cursor_down=1; e.preventDefault(); }
+  if (whatkey == 27) { bb2js__end_it_all=1; }  //{ self.location.href="about:blank"; }
+//  if (whatkey == 65) { autorotate=autorotate ^ 1; }
+  bb2js__GetKey=whatkey;
+  // 37=left,38=up,39=right,40=down, 27=esc, 65=A...
+}
+
+function keyrelease(e)
+{
+  var whatkey = event.keyCode; //get ascii of key released
+  if (whatkey == 37) { bb2js__cursor_right=0; e.preventDefault(); }
+  if (whatkey == 39) { bb2js__cursor_left=0; e.preventDefault(); }
+  if (whatkey == 38) { bb2js__cursor_up=0; e.preventDefault(); }
+  if (whatkey == 40) { bb2js__cursor_down=0; e.preventDefault(); }
+  // 37=left,38=up,39=right,40=down, 27=esc, 65=A
+}
+
+
+function mausinit()
+{
+
+  window.captureEvents(Event.CLICK);
+  window.onmousedown= maus_down; // works in Brave, hopefully others too
+  window.onmouseup= maus_rel;
+  window.captureEvents(Event.MOUSEMOVE);
+  window.onmousemove= mausmerkxy;
+}
+
+function maus_down(e)
+{
+  bb2js__mousedown=1; 
+}
+function maus_rel(e)
+{
+  bb2js__mousedown=0; 
+}
+
+function mausmerkxy(e)
+{
+  bb2js__old_mousex=bb2js__mousex;
+  bb2js__old_mousey=bb2js__mousey;
+  bb2js__mousex = e.pageX;
+  bb2js__mousey = e.pageY;
+}
+
+function mausmerk(e)
+{
+  bb2js__old_mousex=bb2js__mousex;
+  bb2js__old_mousey=bb2js__mousey;
+  bb2js__mousex = e.pageX;
+  bb2js__mousey = e.pageY;
+  bb2js__mousedown=1; // wtf?
+}
+
+function MouseX()
+{return bb2js__mousex;}
+
+function MouseY()
+{return bb2js__mousey;}
+
+function MouseDown(b)
+{return bb2js__mousedown;}
+
+  function displayCoords(e) {
+//    alert("x: " + e.pageX + " y: " + e.pageY+"  |  "+);
+//    status= "x: " + e.pageX + " y: " + e.pageY;
+  }
+
+
+function bb2js__my_sin(v)
+{
+ return Math.sin(v/bb2js__rad_rel);
+}
+
+function bb2js__my_cos(v)
+{
+ return Math.cos(v/bb2js__rad_rel);
+}
+
+function bb2js__my_atan2(x,y) // from old project, converts blitz to js atan2, left here for historical purposes
+{
+ //; wandelt den winkel einer koordinate relativ zu 0,0 in einen Grad, 0-359.99
+ //; in js ergibt atan das Bodenmass in radians aus, die müssen dann mit 57.29577951 multipliziert werden, um auf Grad zu kommen
+ var ata=0;
+ if(y==0){y=0.0000001;} // prevent div by zero
+ if(y>0) {ata=Math.atan(x/y);}
+ else {
+  // if(x>0){ata=180+Math.atan(x/y);}
+  if(x>0){ata=3.1415926+Math.atan(x/y);}
+  //else {ata=-(180-Math.atan(x/y));} }
+  else {ata=-(3.1415926-Math.atan(x/y));} }
+ return ata*bb2js__rad_rel; // 57.29577951
+}
+
+// ****************************************************************************************************
+</script>
+
+
+</head>
+<body onload="bb2js__myinit();" id="boody">
+<h1 id="meldung">Loading...</h1>
+
+<script>
+document.write('<canvas id="mycanvas" width="'+bb2js__game_width+'" height="'+bb2js__game_height+'"></canvas>');
+document.write(dumpfbacke); // this preloads images and audio
+</script>
+
+</body>
+</html>
