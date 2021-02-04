@@ -1,0 +1,36 @@
+body{
+	height: 100%;
+	overflow: hidden; /* keeps scrollbar off IE */
+	font-family: arial,sans-serif;
+	font-size: 13px;
+	color: #000;
+	background-color: #000;
+	border: 0 none white;
+	padding: 0;
+	margin: 0;
+}
+canvas{
+	border: 0;
+	padding: 0;
+  width:100vw;
+  height: 100vh;
+  display: block;
+	outline: none;
+}
+textarea{
+  background-color: #DDD;
+	border: 0;
+	padding: 0;
+	margin: 0;
+	outline: none;
+  width: 100%;
+  display:none;
+}
+div.splitter{
+  background-color: #FFF;
+	border: 0;
+	padding: 0;
+	margin: 0;
+	height: 8px;
+	display:none;
+}
