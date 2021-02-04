@@ -1,0 +1,31 @@
+
+Jack Airbourne - a Gravity Anomaly. 
+***********************************
+
+HTML5 version, 1st release.
+
+Coded by Dieter Marfurt
+
+Credit to the great Artists who contributed the better part of the Art in this release:
+***************************************************************************************
+
+Parallax Layers based on original work "The Dawn" by saukgp, https://saukgp.itch.io, https://eragenx.com
+
+Animated player character "Pixel Adventurer" by rvros, https://rvros.itch.io/
+
+Animated enemy character "Fantasy Warrior" by LuizMelo, https://luizmelo.itch.io/
+
+Animated enemy Spider by Tuomo-Untinen
+
+Note: all enemy sprites unfortunately had to be downscaled and do no longer show the great work 
+of the originals.
+
+
+Music by Matthew Pablo http://www.matthewpablo.com
+
+Bitmap Font by zingot, https://zingot.itch.io/
+
+If I forgot someone, sorry, it happens unintentionally.
+I suggest everybody put credit info into their asset zip files.
+
+jan 2021
